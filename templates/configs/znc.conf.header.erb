@@ -1,10 +1,22 @@
-AnonIPLimit  = 10
-Listener4    = <% if @ssl == 'true' -%>+<% end -%><%= @port %>
+AnonIPLimit = 10
 ConnectDelay = 5
+LoadModule = webadmin
+MaxBufferSize = 500
+ProtectWebSessions = true
+<% if @ssl == 'true' -%>SSLCertFile = <%= @ssl_source %><% end -%>
 ServerThrottle = 30
-Skin         = dark-clouds
-StatusPrefix = *
+Version = 1.2
+<%# Basic listener type. Only one, though there could be more. %>
+<Listener listener0>
+	AllowIRC = true
+	AllowWeb = true
+	IPv4 = true
+    IPv6 = <%= @ipv6 %>
+    Port = <%= @port %>
+    SSL = <%= @ssl %>
+</Listener>
+
 <% if @auth_type == 'sasl' -%>
 LoadModule   = saslauth saslauthd
 <% end -%>
-LoadModule   = webadmin
+LoadModule   = <%= 

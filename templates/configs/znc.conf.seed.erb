@@ -1,32 +1,39 @@
 <User <%= @name %>>
-        Nick       = <%= @name %>
-        AltNick    = <%= @name %>_
-        Ident      = <%= @name %>
-        RealName   = <%= @name %>
-        Pass = plain#<%= @pass %>
+        Nick       = <%= @nickname %>
+        AltNick    = <%= @altnick %>
+        Ident      = <%= @ident %>
+        RealName   = <%= @realname %>
         QuitMsg = '<%= @quitmsg %>'
         ChanModes  = +stn
         Buffer     = <%= @buffer %>
         KeepBuffer = <%= @keepbuffer %>
+        
         MultiClients = true
         BounceDCCs = true
         DenyLoadMod = false
         Admin = <%= @admin %>
-        DenySetVHost = false
         DCCLookupMethod = default
         TimestampFormat = [%H:%M:%S]
-        AppendTimestamp = false
-        PrependTimestamp = true
         TimezoneOffset = 0.00
         JoinTries = 10
         MaxJoins = 5
-        IRCConnectEnabled = true
-        Server     = <%= @server %> <% if @ssl == 'true' -%>+<% end -%><%= @port %>
+        Admin = true
+        Allow = *
+        AutoClearChanBuffer = true
+        DenyLoadMod = true
+        DenySetBindHost = true
+        MaxJoins = 0
+        MaxNetworks = <%= @maxnetworks %>
+        MultiClients = true
+        PrependTimestamp = true
+        AppendTimestamp = false
+        StatusPrefix = *
+        Timezone = <%= @timezone %>
         
-        <%- if @default_channel -%>
-        <Chan <%= @default_channel %>>
-        Modes = +stn
-        </Chan>
-        <%- end -%>
-
-</User>
+        <%- if @pass_hash %>
+        <Pass password>
+            Hash = <%= @pass_hash['hash'] %>
+            Method = <%= @pass_hash['method'].upcase %>
+            Salt = <%= @pass_hash['salt'] %>
+        </Pass>
+        <%- end %>

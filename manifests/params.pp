@@ -29,7 +29,7 @@ class znc::params {
     }
     ubuntu, debian: {
       $zc_suffix = 'debian'
-      $zc_packages = [ 'znc', 'znc-extra', 'znc-perl' ]
+      $zc_packages = [ 'znc', 'znc-perl' ]
     }
   }
 

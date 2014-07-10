@@ -18,20 +18,23 @@
 # Sample Usage:
 #   znc::user { 'jfryman': }
 #
-# This class file is not called directly
+# This define is called directly
 define znc::user(
+  $timezone,
   $ensure = 'present',
   $admin  = 'false',
   $buffer = 500,
   $keepbuffer = 'false',
-  $server = 'irc.freenode.net',
-  $port = 6667,
-  $ssl = 'false',
-  $quitmsg = 'puppet <3',
   $pass = '',
-  $default_channel = undef,
+  $nickname = $name,
+  $altnick = "${name}_",
+  $ident = $name,
+  $realname = $name,
+  $maxnetworks = 1,
+  $quitmsg = 'ZNC',
 ) {
   include znc::params
+  include stdlib
 
   File {
     owner => 'root',
@@ -39,20 +42,67 @@ define znc::user(
     mode  => '0600',
   }
   Exec {
-    path => '/bin:/sbin:/usr/bin:/usr/sbin',
+    path => '/bin:/sbin:/usr/bin:/usr/sbin'
   }
+  # TODO: Default time zone.
+  
+  $filename = "${znc::params::zc_config_dir}/configs/users/${name}.conf"
+  $network_path = "${znc::params::zc_config_dir}/configs/users/${name}/networks/"
+
+  $header = "${filename}.head"
 
   if $ensure == 'present' {
-    file { "${znc::params::zc_config_dir}/configs/users/${name}":
-      ensure  => file,
-      content => template('znc/configs/znc.conf.seed.erb'),
-      before  => Exec["add-znc-user-${name}"],
+    
+    notice("${znc::params::zc_config_dir}/configs/users/${name}/")
+    notice($network_path)
+    notice("${znc::params::zc_config_dir}/users/${name}")
+
+    file{"${znc::params::zc_config_dir}/configs/users/${name}/":
+        ensure => directory
+    } ->
+    file{$network_path:
+      ensure  => directory,
     }
-    exec { "add-znc-user-${name}":
-      command => "cat ${znc::params::zc_config_dir}/configs/users/${name} >> ${znc::params::zc_config_dir}/configs/znc.conf",
-      unless  => "grep ${name} ${znc::params::zc_config_dir}/configs/znc.conf",
-      require => Exec['initialize-znc-config'],
-      notify  => Service['znc'],
+
+    file{"${znc::params::zc_config_dir}/users/${name}":
+        ensure  => directory,
+        require => File["${znc::params::zc_config_dir}/users"]
+    } ->
+    file{"${znc::params::zc_config_dir}/users/${name}/networks":
+        ensure  => directory
     }
+
+    if $pass {
+      $pass_hash = znc_password_hash($pass)
+    }
+    
+    file{$header:
+        ensure  => file,
+        content => template('znc/configs/znc.conf.seed.erb')
+    }
+    
+    exec { "collect-${name}-networks":
+      command     => "cat $header ${network_path}/* > ${filename}",
+      creates     => $filename,
+      refreshonly => true
+    }
+    
+    # Concats the closing </User> tag into the config file.
+    exec{"close-${name}-config":
+        command     => "echo '</User>' >> ${filename}",
+        refreshonly => true,
+        tag         => "znc-user"
+    }
+    
+    # The order of operations for assembling the config file
+    File[$header]
+    ~> Exec["collect-${name}-networks"]
+    ~> Exec["close-${name}-config"]
+    
+    # The concatenation for the network files has to occur
+    # before we execute the collector for them.
+    Concat <| tag == "znc-network-${user}" |>
+    ~> Exec["collect-${name}-networks"]
+    
   }
 }

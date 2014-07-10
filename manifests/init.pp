@@ -28,23 +28,12 @@
 # Sample Usage:
 #  class { 'znc': 
 #    ssl                 => 'true', 
-#    organizationName    => 'Fryman and Associates, Inc',
-#    localityName        => 'Nashville',
-#    stateOrProvinceName => 'TN',
-#    countryName         => 'US',
-#    emailAddress        => 'james@frymanandassociates.net',
-#    commonName          => 'irc.frymanandassociates.net',
+#    port                => 6667
 #  }
 class znc(
   $auth_type           = $znc::params::zc_auth_type,
-  $ssl_source          = undef,
+  $ssl_cert            = undef,
   $ssl                 = $znc::params::zc_ssl,
-  $organizationName    = undef,
-  $localityName        = undef,
-  $stateOrProvinceName = undef,
-  $countryName         = undef,
-  $emailAddress        = undef,
-  $commonName          = undef,
   $port                = $znc::params::zc_port
 ) inherits znc::params {
   include stdlib
@@ -52,16 +41,11 @@ class znc(
   ### Begin Flow Logic ###
   anchor { 'znc::begin': }
   -> class { 'znc::package': }
+  -> class { 'znc::system': }
   -> class { 'znc::config': 
        auth_type           => $auth_type,
        ssl                 => $ssl,
-       ssl_source          => $ssl_source,
-       organizationName    => $organizationName,
-       localityName        => $localityName,
-       stateOrProvinceName => $stateOrProvinceName,
-       countryName         => $countryName,
-       emailAddress        => $emailAddress,
-       commonName          => $commonName,
+       ssl_cert            => $ssl_cert,
        port                => $port,
      }
   ~> class { 'znc::service': }

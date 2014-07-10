@@ -1,0 +1,6 @@
+	<Network <%= @name %>>
+        FloodBurst = <%= @floodburst %> 
+		FloodRate = <%= @floodburst %>
+		IRCConnectEnabled = <%= @connect_enabled %>
+        Ident = <%= @ident %>
+        Server = <%= @server %> <% if @ssl == 'true' -%>+<% end -%><%= @port %>

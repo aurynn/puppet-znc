@@ -1,24 +1,18 @@
 # Class: znc::config
 #
 # Description
-#  This class is designed to configure the system to use ZNC after packages have been deployed
+#  This class is designed to set up the ZNC configuration after the package
+#  has been deployed and the initscripts and users are set up.
 #
 # Parameters:
 #   $auth_type: (plain|sasl). Will determine to use local auth or SASL auth.
-#   $ssl: (true|false). To enable or disable SSL support. Will autogen a SSL certificate.
+#   $ssl: (true|false). To enable or disable SSL support. 
+#   $ssl_cert: A path to an SSL certificate file.
 #   $port: port to run ZNC on.
-#   $organizationName: Org Name for SSL Self Signed Cert
-#   $localityName: City for SSL Self Signed Cert
-#   $stateOrProvinceName: State or Province for SSL Self Signed Cert
-#   $countryName: Country for SSL Self Signed Cert
-#   $emailAddress: Admin email for SSL Self Signed Cert
-#   $commonName: Common Name for SSL Self Signed Cert
 # 
 # Actions:
-#  - Sets up ZNC Seed Configuration
-#  - Sets up SSL (if configured)
-#  - Sets up Regular Users from params [znc::user]
-#  - Sets up Admin Users from params [znc::user, admin => true]
+#  - Sets up ZNC config concat element.
+#  - Copies SSL cert into position, if provided.
 #
 # Requires:
 #  This module has no requirements
@@ -28,13 +22,7 @@
 class znc::config(
   $auth_type            = undef,
   $ssl                  = undef,
-  $ssl_source           = undef,
-  $organizationName     = undef,
-  $localityName         = undef,
-  $stateOrProvinceName  = undef,
-  $countryName          = undef,
-  $emailAddress         = undef,
-  $commonName           = undef,
+  $ssl_cert             = undef,
   $port,
 ) {
   File {
@@ -46,96 +34,51 @@ class znc::config(
     path => '/bin:/sbin:/usr/bin:/usr/sbin'
   }
 
-  user { $znc::params::zc_user:
-    ensure     => present,
-    uid        => $znc::params::zc_uid,
-    gid        => $znc::params::zc_gid,
-    shell      => '/bin/bash',
-    comment    => 'ZNC Service Account',
-    managehome => 'true',
-  }
-  group { $znc::params::zc_group:
-    ensure => present,
-    gid    => $znc::params::zc_gid,
-  }
   file { $znc::params::zc_config_dir:
     ensure => directory,
   }
   file { "${znc::params::zc_config_dir}/configs":
     ensure => directory,
-  }
+  }->
   file { "${znc::params::zc_config_dir}/configs/users":
      ensure  => directory,
-     purge   => true,
-     recurse => true,
-     notify  => Exec['remove-unmanaged-users'],
   }
-  file { "${znc::params::zc_config_dir}/configs/znc.conf.header":
-    ensure  => file,
-    content => template('znc/configs/znc.conf.header.erb'),
-  }
-  file { "${znc::params::zc_config_dir}/configs/znc.conf":
-    ensure  => file,
-    require => Exec['initialize-znc-config'],
-  }
-  file { '/etc/init.d/znc':
-    ensure  => file,
-    owner   => 'root',
-    group   => 'root',
-    mode    => '0755',
-    content => template("znc/etc/init.d/znc.${znc::params::zc_suffix}.erb"),
-  }
-  file { "${znc::params::zc_config_dir}/configs/clean_users":
-     ensure => file,
-     owner  => 'root',
-     group  => 'root',
-     mode   => '0700',
-     content => template('znc/bin/clean_znc_users.erb'),
+  file{"${znc::params::zc_config_dir}/users":
+    ensure  => directory,
+    require => File[$znc::params::zc_config_dir]
   }
 
-  # Bootstrap SSL
-  if $ssl == 'true' and !$ssl_source {
-    file { "${znc::params::zc_config_dir}/ssl":
-      ensure => directory,
-      mode   => '0600',
-    }
-    file { "${znc::params::zc_config_dir}/bin":
-      ensure => directory,
-    }
-    file { "${znc::params::zc_config_dir}/bin/generate_znc_ssl":
-      ensure  => file,
-      mode    => '0755',
-      content => template('znc/bin/generate_znc_ssl.erb'),
-      require => File["${znc::params::zc_config_dir}/ssl"],
-    }
-    file { "${znc::params::zc_config_dir}/znc.pem":
-      ensure  => 'file',
-      mode    => '0600',
-      require => Exec['create-self-signed-znc-ssl'],
-    }
-    exec { 'create-self-signed-znc-ssl':
-      command => "${znc::params::zc_config_dir}/bin/generate_znc_ssl",
-      creates => "${znc::params::zc_config_dir}/znc.pem",
-    }
-  }
-  
-  if $ssl_source {
+  # Copies the SSL cert into place.
+  # Not ideal, but workable.
+  if $ssl and $ssl_cert {
     file { "${znc::params::zc_config_dir}/znc.pem":
       ensure => file,
       mode   => '0600',
-      source => $ssl_source,
+      source => $ssl_cert,
     }
   }
 
-  # Bootstrap config files
-  exec { 'initialize-znc-config':
-    command => "cat ${znc::params::zc_config_dir}/configs/znc.conf.header > ${znc::params::zc_config_dir}/configs/znc.conf",
-    creates => "${znc::params::zc_config_dir}/configs/znc.conf",
-    require => File["${znc::params::zc_config_dir}/configs/znc.conf.header"],
+  $config = "${znc::params::zc_config_dir}/configs/znc.conf"
+  $user_path ="${znc::params::zc_config_dir}/configs/users"
+  $config_base = "${config}.base"
+    
+  file{$config_base:
+    ensure   => present,
+    content  => template("znc/configs/znc.conf.header.erb")
   }
-  exec { 'remove-unmanaged-users':
-     command     => "${znc::params::zc_config_dir}/configs/clean_users",
-     refreshonly => 'true',
-     require     => File["${znc::params::zc_config_dir}/configs/clean_users"],
+
+  exec { "collect-znc-users":
+    command     => "cat $config_base ${user_path}/*.conf > ${config}",
+    refreshonly => true
   }
+
+  # If the base file changes, regenerate the config
+  File[$config_base]
+  ~> Exec["collect-znc-users"]
+
+  # If any of the users have changed, regenerate the config.
+
+  Exec <| tag == "znc-user" |>
+  ~> Exec["collect-znc-users"]
+  
 }
