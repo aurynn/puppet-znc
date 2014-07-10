@@ -56,7 +56,7 @@ define znc::user::network(
         }
         concat::fragment{"${real_user}-${real_network}-end":
             target  => $file,
-            content => "\n</Network>",
+            content => "\n        </Network>\n",
             order   => 99
         }
         

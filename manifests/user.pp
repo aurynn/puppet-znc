@@ -90,6 +90,7 @@ define znc::user(
     # Concats the closing </User> tag into the config file.
     exec{"close-${name}-config":
         command     => "echo '</User>' >> ${filename}",
+        unless      => "grep '</User>' ${filename}",
         refreshonly => true,
         tag         => "znc-user"
     }
@@ -101,7 +102,7 @@ define znc::user(
     
     # The concatenation for the network files has to occur
     # before we execute the collector for them.
-    Concat <| tag == "znc-network-${user}" |>
+    Concat <| tag == "znc-network-${name}" |>
     ~> Exec["collect-${name}-networks"]
     
   }

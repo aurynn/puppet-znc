@@ -52,7 +52,7 @@ define znc::user::network::module::nickserv(
             target  => $file,
             order   => "98", # just before the end
             tag     => "znc-${real_user}-${real_network}-module",
-            content => "LoadModule = nickserv <hidden>"
+            content => "        LoadModule = nickserv <hidden>\n"
         }
     }
 }
