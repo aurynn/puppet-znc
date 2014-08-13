@@ -8,7 +8,7 @@ define znc::user::network(
     $flood_burst = 4,
     $flood_rate = 1,
     $connect_enabled = 'true',
-    $ident = 'ZNC',
+    $ident = 'ZNC'
 ) {
     include znc::params
     include stdlib
@@ -33,8 +33,8 @@ define znc::user::network(
 
     # TODO: Timezone from a system fact.
 
-    notice("${znc::params::zc_config_dir}/users/${real_user}/networks")
-    notice("${znc::params::zc_config_dir}/users/${real_user}/networks/${real_network}")
+    # notice("${znc::params::zc_config_dir}/users/${real_user}/networks")
+    # notice("${znc::params::zc_config_dir}/users/${real_user}/networks/${real_network}")
 
     if $ensure == "present" {
 
