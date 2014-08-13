@@ -2,7 +2,8 @@ AnonIPLimit = 10
 ConnectDelay = 5
 MaxBufferSize = 500
 ProtectWebSessions = true
-<% if @ssl == 'true' -%>SSLCertFile = <%= @ssl_source %><% end -%>
+<% if @ssl == 'true' -%>SSLCertFile = <%= @ssl_cert %>
+<% end -%>
 ServerThrottle = 30
 Version = 1.2
 <%# Basic listener type. Only one, though there could be more. %>
@@ -10,7 +11,7 @@ Version = 1.2
 	AllowIRC = true
 	AllowWeb = true
 	IPv4 = true
-    IPv6 = <%= @ipv6 %>
+    IPv6 = <%= @ipv6 ? @ipv6 : "false" %>
     Port = <%= @port %>
     SSL = <%= @ssl %>
 </Listener>

@@ -71,10 +71,14 @@ class znc::config(
     command     => "cat $config_base ${user_path}/*.conf > ${config}",
     refreshonly => true
   }
+  file {$config:
+    ensure => present
+  }
 
   # If the base file changes, regenerate the config
   File[$config_base]
   ~> Exec["collect-znc-users"]
+  ~> File[$config]
 
   # If any of the users have changed, regenerate the config.
 
